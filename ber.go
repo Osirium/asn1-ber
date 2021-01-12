@@ -16,6 +16,7 @@ type Packet struct {
 	Data        *bytes.Buffer
 	Children    []*Packet
 	Description string
+	Raw         bool
 }
 
 const (
@@ -255,7 +256,7 @@ func ReadPacket(reader io.Reader) (*Packet, error) {
 	return p, nil
 }
 
-func DecodeString(data []byte) (string) {
+func DecodeString(data []byte) string {
 	return string(data)
 }
 
@@ -397,14 +398,17 @@ func (p *Packet) DataLength() uint64 {
 func (p *Packet) Bytes() []byte {
 	var out bytes.Buffer
 
-	out.Write([]byte{p.ClassType | p.TagType | p.Tag})
-	packet_length := EncodeInteger(p.DataLength())
+	if !p.Raw {
+		out.Write([]byte{p.ClassType | p.TagType | p.Tag})
 
-	if p.DataLength() > 127 || len(packet_length) > 1 {
-		out.Write([]byte{byte(len(packet_length) | 128)})
-		out.Write(packet_length)
-	} else {
-		out.Write(packet_length)
+		packet_length := EncodeInteger(p.DataLength())
+
+		if p.DataLength() > 127 || len(packet_length) > 1 {
+			out.Write([]byte{byte(len(packet_length) | 128)})
+			out.Write(packet_length)
+		} else {
+			out.Write(packet_length)
+		}
 	}
 
 	out.Write(p.Data.Bytes())
